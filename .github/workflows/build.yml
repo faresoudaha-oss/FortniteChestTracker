@@ -1,11 +1,9 @@
 name: Build Windows
 on:
-  push:
-    branches: [main]
+  push: { branches: [main] }
   pull_request:
   workflow_dispatch:
-  release:
-    types: [published]
+  release: { types: [published] }
 
 jobs:
   build:
@@ -13,18 +11,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
+        with: { python-version: "3.12", cache: pip }
       - run: pip install -r requirements-dev.txt
       - name: Tests
         run: python -m pytest -q tests
-        env:
-          QT_QPA_PLATFORM: offscreen
+        env: { QT_QPA_PLATFORM: offscreen }
       - name: Icône
         run: python tools/make_icon.py
-        env:
-          QT_QPA_PLATFORM: offscreen
+        env: { QT_QPA_PLATFORM: offscreen }
       - name: Compilation de l'exécutable
         run: pyinstaller --noconfirm --clean --distpath dist --workpath build FortniteChestTracker.spec
       - name: Test de démarrage de l'exe compilé
@@ -45,3 +39,7 @@ jobs:
           path: |
             dist/FortniteChestTracker.exe
             dist/FortniteChestTracker-Setup.exe
+      - name: Joindre à la release
+        if: github.event_name == 'release'
+        run: gh release upload ${{ github.event.release.tag_name }} dist/FortniteChestTracker.exe dist/FortniteChestTracker-Setup.exe --clobber
+        env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
