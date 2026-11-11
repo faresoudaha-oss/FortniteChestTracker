@@ -13,6 +13,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Remettre à leur place les fichiers envoyés à plat sur GitHub
+        shell: python
+        run: |
+          import os, shutil
+          m = {
+            "replay-exporter": ["Program.cs", "ReplayExporter.csproj"],
+            "third_party": ["UPSTREAM_COMMIT.txt"],
+            "fct": ["analyzer.py", "app.py", "autostart.py", "config.py", "controller.py", "db.py", "paths.py", "replay_header.py", "scanner.py"],
+            "fct/ui": ["main_window.py", "overlay.py", "pages.py", "theme.py", "widgets.py"],
+            "tests": ["test_core.py", "test_e2e.py"],
+            "tools": ["make_icon.py"],
+            "installer": ["FortniteChestTracker.iss"],
+            "docs": ["PARSER.md"],
+            "assets": ["icon.ico"],
+          }
+          for d, files in m.items():
+              os.makedirs(d, exist_ok=True)
+              for f in files:
+                  if os.path.isfile(f):
+                      shutil.copyfile(f, os.path.join(d, f))
+                      print("remis en place :", f, "->", d)
+
       - name: Récupérer le décodeur open source (LED-N, MIT) à la version figée
         shell: pwsh
         run: |
