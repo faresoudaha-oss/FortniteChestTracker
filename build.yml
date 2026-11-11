@@ -1,0 +1,82 @@
+name: Build Windows
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Récupérer le décodeur open source (LED-N, MIT) à la version figée
+        shell: pwsh
+        run: |
+          $sha = (Get-Content third_party/UPSTREAM_COMMIT.txt).Trim()
+          git clone https://github.com/LED-N/Fortnite-ChestCounter third_party/upstream
+          git -C third_party/upstream checkout $sha
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Compiler le module de lecture des replays (.NET)
+        run: >
+          dotnet publish replay-exporter/ReplayExporter.csproj -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true -p:DebugType=none -o bin
+
+      - name: Test du module (doit répondre « usage » et le code 2)
+        shell: pwsh
+        run: |
+          & bin\ReplayExporter.exe
+          if ($LASTEXITCODE -ne 2) { Write-Error "Code inattendu : $LASTEXITCODE"; exit 1 }
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+
+      - name: Tests
+        run: python -m pytest -q tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+
+      - name: Icône
+        run: python tools/make_icon.py
+        env:
+          QT_QPA_PLATFORM: offscreen
+
+      - name: Compilation de l'application
+        run: pyinstaller --noconfirm --clean --distpath dist --workpath build FortniteChestTracker.spec
+
+      - name: Test de démarrage de l'exe compilé
+        shell: pwsh
+        run: |
+          $env:QT_QPA_PLATFORM = "offscreen"
+          $env:FCT_REQUIRE_EXPORTER = "1"
+          $p = Start-Process -FilePath dist\FortniteChestTracker.exe -ArgumentList "--selftest" -Wait -PassThru -RedirectStandardOutput out.txt
+          Get-Content out.txt
+          if ($p.ExitCode -ne 0 -or -not (Select-String -Path out.txt -Pattern "SELFTEST OK")) { exit 1 }
+
+      - name: Installateur
+        shell: pwsh
+        run: |
+          if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) { choco install innosetup -y --no-progress }
+          $iscc = (Get-Command iscc -ErrorAction SilentlyContinue).Source
+          if (-not $iscc) { $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" }
+          & $iscc installer\FortniteChestTracker.iss
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FortniteChestTracker
+          path: |
+            dist/FortniteChestTracker.exe
+            dist/FortniteChestTracker-Setup.exe
