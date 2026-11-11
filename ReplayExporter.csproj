@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ReplayExporter</AssemblyName>
+    <RootNamespace>ReplayExporter</RootNamespace>
+    <Version>0.1.0</Version>
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\third_party\upstream\lib\FortniteReplayReader\FortniteReplayReader.csproj" />
+    <Compile Include="..\third_party\upstream\src\ChestCounter\Models.cs" />
+    <Compile Include="..\third_party\upstream\src\ChestCounter\ReplayAnalyzer.cs" />
+    <Compile Include="..\third_party\upstream\src\ChestCounter\Lang.cs" />
+  </ItemGroup>
+</Project>
