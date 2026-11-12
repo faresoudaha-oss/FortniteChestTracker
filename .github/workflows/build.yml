@@ -53,10 +53,10 @@ jobs:
           -p:EnableCompressionInSingleFile=true -p:DebugType=none -o bin
 
       - name: Test du module (doit répondre « usage » et le code 2)
-        shell: pwsh
+        shell: cmd
         run: |
-          & bin\ReplayExporter.exe
-          if ($LASTEXITCODE -ne 2) { Write-Error "Code inattendu : $LASTEXITCODE"; exit 1 }
+          bin\ReplayExporter.exe
+          if %ERRORLEVEL% EQU 2 (exit /b 0) else (echo Code inattendu : %ERRORLEVEL% & exit /b 1)
 
       - uses: actions/setup-python@v5
         with:
