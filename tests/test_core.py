@@ -46,7 +46,8 @@ def test_bad_files(tmp_path):
         analyze_file(make_replay(tmp_path / "l.replay", live=True))
 
 
-def test_no_backend_invents_nothing(tmp_path):
+def test_no_backend_invents_nothing(tmp_path, monkeypatch):
+       monkeypatch.setattr("fct.analyzer.bundled_exporter", lambda: None)
     m = analyze_file(make_replay(tmp_path / "a.replay"))
     assert (m.opened, m.destroyed, m.certainty) == (0, 0, "indisponible")
 
