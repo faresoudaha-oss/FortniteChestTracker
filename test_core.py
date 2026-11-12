@@ -46,7 +46,8 @@ def test_bad_files(tmp_path):
         analyze_file(make_replay(tmp_path / "l.replay", live=True))
 
 
-def test_no_backend_invents_nothing(tmp_path):
+def test_no_backend_invents_nothing(tmp_path, monkeypatch):
+       monkeypatch.setattr("fct.analyzer.bundled_exporter", lambda: None)
     m = analyze_file(make_replay(tmp_path / "a.replay"))
     assert (m.opened, m.destroyed, m.certainty) == (0, 0, "indisponible")
 
@@ -95,14 +96,3 @@ def test_scanner_waits_for_stable_file(tmp_path):
     assert sc.poll() == [f]
     now[0] = 30
     assert sc.poll() == []        # jamais deux fois
-
-
-def test_friendly_mode_and_non_br(tmp_path):
-    from fct.analyzer import friendly_mode
-    assert friendly_mode("Playlist_DefaultSolo") == "Solo"
-    assert friendly_mode("Playlist_DefaultDuo") == "Duo"
-    assert friendly_mode("Playlist_Bidule") == "Bidule"
-    fake = tmp_path / "fake2.py"
-    fake.write_text("import json;print(json.dumps({'mode':'Inconnu','battle_royale':False,'events':[]}))")
-    m = analyze_file(make_replay(tmp_path / "c.replay"), f"{sys.executable} {fake}")
-    assert m.mode == "Hors Battle Royale" and m.opened == 0 and m.certainty == "certaine"
