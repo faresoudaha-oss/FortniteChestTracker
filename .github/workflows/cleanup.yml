@@ -1,0 +1,60 @@
+name: Nettoyer le dépôt
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ranger les fichiers et supprimer les doublons
+        shell: python
+        run: |
+          import glob, os, shutil
+          moves = {
+            "replay-exporter": ["Program.cs", "ReplayExporter.csproj"],
+            "third_party": ["UPSTREAM_COMMIT.txt"],
+            "fct": ["analyzer.py", "app.py", "autostart.py", "config.py", "controller.py", "db.py", "paths.py", "replay_header.py", "scanner.py"],
+            "fct/ui": ["main_window.py", "overlay.py", "pages.py", "theme.py", "widgets.py"],
+            "tests": ["test_core.py", "test_e2e.py"],
+            "tools": ["make_icon.py"],
+            "installer": ["FortniteChestTracker.iss"],
+            "docs": ["PARSER.md"],
+            "assets": ["icon.ico"],
+          }
+          for d, files in moves.items():
+              os.makedirs(d, exist_ok=True)
+              for f in files:
+                  if os.path.isfile(f):
+                      shutil.move(f, os.path.join(d, f))
+                      print("rangé :", f, "->", d)
+          # le test corrigé : ligne indentée de 4 espaces exactement
+          p = "tests/test_core.py"
+          lines = open(p, encoding="utf-8").read().split("\n")
+          for i, l in enumerate(lines):
+              if l.strip().startswith('monkeypatch.setattr("fct.analyzer.bundled_exporter"'):
+                  lines[i] = "    " + l.strip()
+          open(p, "w", encoding="utf-8").write("\n".join(lines))
+          # doublons et fichiers inutiles à la racine
+          trash = ["build.yml", "download", "__init__.py"] + glob.glob("README (*).md") + glob.glob("__init__ (*).py")
+          for f in trash:
+              if os.path.isfile(f):
+                  os.remove(f)
+                  print("supprimé :", f)
+          for root, dirs, _ in os.walk("."):
+              for d in list(dirs):
+                  if d == "__pycache__":
+                      shutil.rmtree(os.path.join(root, d))
+                      dirs.remove(d)
+
+      - name: Enregistrer le résultat
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Nettoyage du dépôt : fichiers rangés, doublons supprimés" || echo "Rien à changer"
+          git push
