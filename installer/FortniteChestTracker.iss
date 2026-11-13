@@ -29,6 +29,8 @@ Name: "autostart"; Description: "Lancer avec Windows"; Flags: unchecked
 
 [Files]
 Source: "..\dist\FortniteChestTracker.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\third_party\upstream\LICENSE"; DestDir: "{app}\licences"; DestName: "LICENSE-ChestCounter.txt"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "..\third_party\upstream\lib\LICENSE-FortniteReplayDecompressor"; DestDir: "{app}\licences"; DestName: "LICENSE-FortniteReplayDecompressor.txt"; Flags: ignoreversion skipifsourcedoesntexist
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\FortniteChestTracker.exe"

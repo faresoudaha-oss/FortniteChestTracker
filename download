@@ -1,8 +1,0 @@
-__pycache__/
-*.pyc
-build/
-dist/
-bin/
-.pytest_cache/
-third_party/upstream/
-obj/

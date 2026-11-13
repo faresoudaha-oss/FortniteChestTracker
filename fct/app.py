@@ -85,6 +85,10 @@ def main(argv=None):
         win.show()
         app.processEvents()
         assert ctl.db.totals()["matches"] == 0 and overlay.isVisible()
+        from .analyzer import bundled_exporter
+        if os.environ.get("FCT_REQUIRE_EXPORTER") == "1":
+            assert bundled_exporter(), "ReplayExporter.exe absent de l'application"
+        print("Module de détection :", bundled_exporter() or "absent")
         print("SELFTEST OK")
         return 0
     return app.exec()

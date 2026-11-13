@@ -19,9 +19,11 @@ Oodle selon la saison). Cela se fait par un **module externe** que l'application
 Seules les actions `actor == "player"` sont comptées. Un `unknown` ou un `certain: false` rend la partie « incertaine ».
 Sans module configuré, la partie est marquée « indisponible » et **aucun coffre n'est compté**.
 
-À renseigner dans Paramètres > « Module de détection des coffres ».
+Laisser vide dans Paramètres pour utiliser le module fourni.
 
-## État actuel (honnête)
-Ce module n'est **pas fourni et non testé** : je n'ai pas de vrais replays Fortnite. Pistes : parseurs open source
-existants (FortniteReplayReader en C#, replay-reader en Node.js) à encapsuler dans un petit exécutable respectant ce contrat.
-Il faudra vérifier sur de vrais replays quels événements correspondent à l'ouverture d'un coffre et à son auteur.
+## État actuel
+Le module fourni est `replay-exporter` (C#, .NET), compilé en `bin/ReplayExporter.exe` et embarqué dans l'application. Il réutilise
+`ReplayAnalyzer.cs` du projet LED-N/Fortnite-ChestCounter (MIT) et renvoie le JSON ci-dessus. Champs supplémentaires :
+`battle_royale` (faux = partie ignorée), `ammo_boxes`, `blueprint` (nom technique du coffre).
+Exécuté sur 3 vrais replays : voir README. L'exactitude des comptes n'est pas encore vérifiée face à un décompte réel.
+Un autre module peut être utilisé via Paramètres, tant qu'il respecte ce contrat.

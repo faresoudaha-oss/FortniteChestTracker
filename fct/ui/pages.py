@@ -234,7 +234,7 @@ class SettingsPage(QWidget):
         tip.setObjectName("muted")
         lay.addWidget(tip)
         self.parser = QLineEdit(s.get("parser_cmd"))
-        self.parser.setPlaceholderText("Commande du module de détection des coffres (optionnel, voir docs/PARSER.md)")
+        self.parser.setPlaceholderText("Laisser vide pour utiliser le module fourni (avancé : voir docs/PARSER.md)")
         self.parser.editingFinished.connect(lambda: s.set("parser_cmd", self.parser.text().strip()))
         lay.addWidget(QLabel("Module de détection des coffres :"))
         lay.addWidget(self.parser)
