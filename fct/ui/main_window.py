@@ -1,10 +1,11 @@
 from PySide6.QtWidgets import QButtonGroup, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QStackedWidget, QVBoxLayout, QWidget
 
+from .crosshair_page import CrosshairPage
 from .pages import AnalysisPage, DashboardPage, HistoryPage, SettingsPage
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, ctl, overlay):
+    def __init__(self, ctl, overlay, xover):
         super().__init__()
         self.setWindowTitle("Fortnite Chest Tracker")
         self.resize(1040, 680)
@@ -27,7 +28,8 @@ class MainWindow(QMainWindow):
         self.stack = QStackedWidget()
         group = QButtonGroup(self)
         pages = [("📊  Tableau de bord", DashboardPage(ctl)), ("🕘  Historique", HistoryPage(ctl)),
-                 ("🔍  Analyse", AnalysisPage(ctl)), ("⚙  Paramètres", SettingsPage(ctl, overlay))]
+                 ("🔍  Analyse", AnalysisPage(ctl)), ("🎯  Crosshair", CrosshairPage(ctl, xover)),
+                 ("⚙  Paramètres", SettingsPage(ctl, overlay))]
         for i, (name, page) in enumerate(pages):
             b = QPushButton(name)
             b.setObjectName("nav")
