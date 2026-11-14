@@ -17,6 +17,10 @@ class ReplayError(Exception):
     pass
 
 
+class ReplayIncomplete(ReplayError):
+    """Replay encore en cours d'écriture (partie en cours) : à réessayer plus tard, ce n'est pas une erreur."""
+
+
 @dataclass
 class ReplayInfo:
     file_version: int = 0
@@ -104,10 +108,10 @@ def parse_header(path) -> ReplayInfo:
                 if len(head) == 0:
                     break
                 if len(head) < 8:
-                    raise ReplayError("Chunk tronqué")
+                    raise ReplayIncomplete("Chunk tronqué")
                 ctype, size = struct.unpack("<Ii", head)
                 if size < 0 or f.tell() + size > end:
-                    raise ReplayError("Fichier tronqué (écriture inachevée ?)")
+                    raise ReplayIncomplete("Fichier tronqué (écriture inachevée ?)")
                 f.seek(size, 1)
                 info.chunk_counts[ctype] = info.chunk_counts.get(ctype, 0) + 1
     except OSError as e:

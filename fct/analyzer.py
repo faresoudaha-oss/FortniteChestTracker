@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .db import MatchRecord
-from .replay_header import ReplayError, parse_header
+from .replay_header import ReplayError, ReplayIncomplete, parse_header
 
 KINDS = ("standard", "rare", "enterre", "special", "sprite")
 
@@ -100,7 +100,7 @@ def analyze_file(path, parser_cmd: str = "") -> MatchRecord:
     path = Path(path)
     info = parse_header(path)           # lève ReplayError si corrompu / incomplet
     if not info.complete:
-        raise ReplayError("Rediffusion incomplète (partie en cours ou écriture inachevée)")
+        raise ReplayIncomplete("Rediffusion incomplète (partie en cours ou écriture inachevée)")
     played = info.timestamp.strftime("%Y-%m-%d %H:%M:%S") if info.timestamp else None
     duration = info.length_ms // 1000
     args = resolve_parser(parser_cmd)

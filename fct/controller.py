@@ -7,7 +7,7 @@ from .analyzer import analyze_file
 from .config import Settings
 from .db import Database
 from .paths import default_replay_dir
-from .replay_header import ReplayError
+from .replay_header import ReplayError, ReplayIncomplete
 from .scanner import FolderScanner
 
 
@@ -28,6 +28,9 @@ class _Job(QRunnable):
             m = analyze_file(self.path, c.settings.get("parser_cmd"))
             c.db.save_match(name, size, mtime, m)
             c.job_done.emit(str(self.path), True, m.note, m.opened, m.certainty)
+        except ReplayIncomplete as e:      # partie encore en cours : pas une erreur, on réessaiera
+            c.db.mark_error(self.path, name, size, mtime, str(e), status="incomplète")
+            c.job_done.emit(str(self.path), False, str(e), 0, "incomplète")
         except ReplayError as e:
             c.db.mark_error(self.path, name, size, mtime, str(e))
             c.job_done.emit(str(self.path), False, str(e), 0, "")
@@ -74,7 +77,7 @@ class Controller(QObject):
         if not self.settings.get("auto_analyze"):
             return
         for p in self.scanner.poll():
-            if self.db.status_of(p) is None:      # nouvelle partie (ou jamais vue au démarrage)
+            if self.db.status_of(p) in (None, "incomplète"):   # nouvelle partie, jamais vue, ou terminée depuis
                 self._submit(p)
 
     def _sync_scanner(self):
@@ -89,7 +92,7 @@ class Controller(QObject):
         """Analyse manuelle : toutes les rediffusions non analysées (ou toutes si force)."""
         n = 0
         for p in self.scanner.list_replays():
-            if force or self.db.status_of(p) in (None, "erreur"):
+            if force or self.db.status_of(p) in (None, "erreur", "incomplète"):
                 self.scanner.mark_done(p)
                 self._submit(p)
                 n += 1
@@ -97,6 +100,8 @@ class Controller(QObject):
 
     def _on_done(self, path, ok, msg, opened, certainty):
         self.pending = max(0, self.pending - 1)
+        if certainty == "incomplète":
+            self.scanner.forget(path)
         self.stats_changed.emit()
         self.replays_changed.emit()
         if ok:

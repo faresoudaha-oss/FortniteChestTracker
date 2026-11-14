@@ -55,10 +55,10 @@ class Database:
             r = c.execute("SELECT status FROM replays WHERE path=?", (str(path),)).fetchone()
             return r[0] if r else None
 
-    def mark_error(self, path, name, size, mtime, error):
+    def mark_error(self, path, name, size, mtime, error, status="erreur"):
         with self._conn() as c:
             c.execute("INSERT OR REPLACE INTO replays VALUES(?,?,?,?,?,?,datetime('now','localtime'))",
-                      (str(path), name, size, mtime, "erreur", error))
+                      (str(path), name, size, mtime, status, error))
 
     def save_match(self, name, size, mtime, m: MatchRecord):
         with self._conn() as c:

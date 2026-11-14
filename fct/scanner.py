@@ -14,6 +14,7 @@ class FolderScanner:
         self.clock = clock
         self._seen: dict[str, tuple] = {}     # path -> (size, mtime, since)
         self._done: set[str] = set()
+        self._blocked: dict[str, tuple] = {}   # replays incomplets : on n'y revient que s'ils changent
 
     def list_replays(self) -> list[Path]:
         if not self.folder or not self.folder.is_dir():
@@ -25,6 +26,17 @@ class FolderScanner:
 
     def mark_done(self, path):
         self._done.add(str(path))
+
+    def forget(self, path):
+        """Replay pas encore terminé : le surveiller à nouveau, mais seulement s'il change."""
+        key = str(path)
+        self._done.discard(key)
+        self._seen.pop(key, None)
+        try:
+            st = Path(path).stat()
+            self._blocked[key] = (st.st_size, st.st_mtime)
+        except OSError:
+            pass
 
     def poll(self) -> list[Path]:
         """Retourne les fichiers stables jamais retournés auparavant."""
@@ -38,6 +50,9 @@ class FolderScanner:
             except OSError:
                 continue
             sig = (st.st_size, st.st_mtime)
+            if self._blocked.get(key) == sig:
+                continue
+            self._blocked.pop(key, None)
             prev = self._seen.get(key)
             if prev is None or prev[:2] != sig:
                 self._seen[key] = (*sig, now)
