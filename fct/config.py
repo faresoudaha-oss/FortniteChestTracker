@@ -22,6 +22,9 @@ DEFAULTS = {
     "overlay_corner": "haut-gauche",   # haut-gauche, haut-droite, bas-gauche, bas-droite, personnalisée
     "overlay_pos": [40, 40],
     "overlay_size": [260, 150],
+    "overlay_opacity": 0.9,
+    "overlay_details": True,
+    "overlay_color": "Vert",
     "autostart": False,
     "parser_cmd": "",                  # exécutable externe de parsing (voir docs/PARSER.md)
     "player_name": "",

@@ -10,6 +10,7 @@ from .controller import Controller
 from .db import Database
 from .ui.main_window import MainWindow
 from .ui.overlay import Overlay
+from .ui.overlay_menu import build_menu
 from .ui.theme import QSS
 
 
@@ -51,8 +52,13 @@ def main(argv=None):
 
     ctl.stats_changed.connect(refresh_overlay)
     ctl.replays_changed.connect(refresh_overlay)
-    overlay.resize(*settings.get("overlay_size"))
     overlay.set_scale(settings.get("overlay_scale"))
+    overlay.set_color(settings.get("overlay_color"))
+    overlay.set_opacity_level(settings.get("overlay_opacity"))
+    overlay.set_details_visible(bool(settings.get("overlay_details")))
+    overlay.resize(overlay.size().expandedTo(overlay.minimumSizeHint()))
+    w0, h0 = settings.get("overlay_size")
+    overlay.resize(max(w0, overlay.width()), max(h0, overlay.height()))
     if settings.get("overlay_corner") == "personnalisée":
         overlay.move(*settings.get("overlay_pos"))
     else:
@@ -62,13 +68,29 @@ def main(argv=None):
     refresh_overlay()
 
     tray = QSystemTrayIcon(icon, app)
+
+    def show_window():
+        win.show()
+        win.raise_()
+        win.activateWindow()
+
+    def quit_app():
+        overlay.hide()
+        tray.hide()
+        win.real_quit()
+        app.quit()
+
+    def toggle_overlay():
+        v = not overlay.isVisible()
+        settings.set("overlay_enabled", v)
+        overlay.setVisible(v)
+
     menu = QMenu()
-    for label, fn in (("Ouvrir", lambda: (win.show(), win.raise_(), win.activateWindow())),
-                      ("Afficher / masquer l'overlay", lambda: overlay.setVisible(not overlay.isVisible())),
-                      ("Quitter", lambda: (overlay.hide(), tray.hide(), win.real_quit(), app.quit()))):
+    for label, fn in (("Ouvrir", show_window), ("Afficher / masquer l'overlay", toggle_overlay), ("Quitter", quit_app)):
         a = QAction(label, menu)
         a.triggered.connect(fn)
         menu.addAction(a)
+    overlay.menu_requested.connect(lambda pos: build_menu(ctl, overlay, show_window, quit_app).exec(pos))
     tray.setContextMenu(menu)
     tray.setToolTip("Fortnite Chest Tracker")
     tray.activated.connect(lambda r: win.show() if r == QSystemTrayIcon.Trigger else None)
