@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 from .config import APP_NAME, Settings
 from .controller import Controller
 from .db import Database
+from .ui.crosshair import CrosshairOverlay
 from .ui.main_window import MainWindow
 from .ui.overlay import Overlay
 from .ui.overlay_menu import build_menu
@@ -44,7 +45,8 @@ def main(argv=None):
     settings = Settings()
     ctl = Controller(settings, Database())
     overlay = Overlay()
-    win = MainWindow(ctl, overlay)
+    xover = CrosshairOverlay(settings)
+    win = MainWindow(ctl, overlay, xover)
 
     def refresh_overlay():
         busy = ctl.pending > 0
@@ -76,6 +78,7 @@ def main(argv=None):
 
     def quit_app():
         overlay.hide()
+        xover.hide()
         tray.hide()
         win.real_quit()
         app.quit()
@@ -85,8 +88,15 @@ def main(argv=None):
         settings.set("overlay_enabled", v)
         overlay.setVisible(v)
 
+    def toggle_crosshair():
+        v = not xover.isVisible()
+        settings.set("crosshair_enabled", v)
+        xover.setVisible(v)
+        xover.refresh()
+
     menu = QMenu()
-    for label, fn in (("Ouvrir", show_window), ("Afficher / masquer l'overlay", toggle_overlay), ("Quitter", quit_app)):
+    for label, fn in (("Ouvrir", show_window), ("Afficher / masquer l'overlay", toggle_overlay),
+                      ("Afficher / masquer le crosshair", toggle_crosshair), ("Quitter", quit_app)):
         a = QAction(label, menu)
         a.triggered.connect(fn)
         menu.addAction(a)
@@ -101,6 +111,8 @@ def main(argv=None):
         win.show()
     if settings.get("overlay_enabled"):
         overlay.show()
+    if settings.get("crosshair_enabled"):
+        xover.show()
     ctl.start()
 
     if selftest:
