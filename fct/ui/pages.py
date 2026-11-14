@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QFileDialog, QGrid
 
 from ..autostart import set_autostart
 from ..paths import find_fortnite_install
+from .overlay import COLORS
 from .widgets import ProgressChart, StatCard
 
 CERT = {"certaine": "✔ Certaine", "incertaine": "⚠ Incertaine", "indisponible": "— Indisponible"}
@@ -228,6 +229,22 @@ class SettingsPage(QWidget):
         r2.addWidget(QLabel("Position :"))
         r2.addWidget(self.corner)
         lay.addLayout(r2)
+        r3 = QHBoxLayout()
+        self.opa = QSlider(Qt.Horizontal)
+        self.opa.setRange(30, 100)
+        self.opa.setValue(int(s.get("overlay_opacity") * 100))
+        self.opa.valueChanged.connect(self.on_opacity)
+        self.color = QComboBox()
+        self.color.addItems(list(COLORS))
+        self.color.setCurrentText(s.get("overlay_color"))
+        self.color.activated.connect(self.on_color)
+        self.det = self._check("Détails sous le total", s.get("overlay_details"), self.on_details)
+        r3.addWidget(QLabel("Opacité du fond :"))
+        r3.addWidget(self.opa, 1)
+        r3.addWidget(QLabel("Couleur du total :"))
+        r3.addWidget(self.color)
+        lay.addLayout(r3)
+        lay.addWidget(self.det)
         tip = QLabel("Astuce : glissez l'overlay avec la souris, redimensionnez-le par le coin inférieur droit. "
                              "Il s'affiche en plein écran fenêtré (pas en plein écran exclusif).")
         tip.setWordWrap(True)
@@ -272,6 +289,32 @@ class SettingsPage(QWidget):
     def on_size(self, v):
         self.ctl.settings.set("overlay_scale", v / 100)
         self.overlay.set_scale(v / 100)
+
+    def on_opacity(self, v):
+        self.ctl.settings.set("overlay_opacity", v / 100)
+        self.overlay.set_opacity_level(v / 100)
+
+    def on_color(self, _):
+        self.ctl.settings.set("overlay_color", self.color.currentText())
+        self.overlay.set_color(self.color.currentText())
+
+    def on_details(self, v):
+        self.ctl.settings.set("overlay_details", v)
+        self.overlay.set_details_visible(v)
+
+    def showEvent(self, e):          # le menu clic droit peut avoir changé les réglages
+        s = self.ctl.settings
+        for w, v in ((self.size, int(s.get("overlay_scale") * 100)), (self.opa, int(s.get("overlay_opacity") * 100))):
+            w.blockSignals(True)
+            w.setValue(v)
+            w.blockSignals(False)
+        for w, v in ((self.corner, s.get("overlay_corner")), (self.color, s.get("overlay_color"))):
+            w.setCurrentText(v)
+        for w, v in ((self.ov, s.get("overlay_enabled")), (self.start, s.get("autostart")), (self.det, s.get("overlay_details"))):
+            w.blockSignals(True)
+            w.setChecked(bool(v))
+            w.blockSignals(False)
+        super().showEvent(e)
 
     def on_corner(self, _):
         c = self.corner.currentText()

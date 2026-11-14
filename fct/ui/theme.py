@@ -5,6 +5,11 @@ TEXT = "#e8e8f0"
 MUTED = "#8b8ba0"
 
 QSS = f"""
+QMenu {{ background: #1a1a23; border: 1px solid #2f2f3f; border-radius: 8px; padding: 6px; }}
+QMenu::item {{ padding: 7px 26px 7px 14px; border-radius: 6px; }}
+QMenu::item:selected {{ background: {ACCENT}; }}
+QMenu::item:disabled {{ color: {MUTED}; }}
+QMenu::separator {{ height: 1px; background: #2f2f3f; margin: 5px 8px; }}
 * {{ font-family: 'Segoe UI', 'Inter', sans-serif; color: {TEXT}; font-size: 13px; }}
 QMainWindow, QWidget#root {{ background: {BG}; }}
 QFrame#sidebar {{ background: #14141b; border-right: 1px solid #23232e; }}

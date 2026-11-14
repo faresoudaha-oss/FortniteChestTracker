@@ -1,59 +1,104 @@
 """Overlay : fenêtre sans bordure, translucide, toujours au premier plan, déplaçable et redimensionnable.
 
+Gros total de coffres ouverts, petits détails dessous, clic droit pour le menu des réglages.
 Fonctionne au-dessus de Fortnite en mode « plein écran fenêtré ». Le plein écran exclusif n'est pas supporté
 (Windows ne permet pas d'afficher une fenêtre ordinaire par-dessus sans injection, ce que ce projet s'interdit).
 """
 from PySide6.QtCore import QPoint, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPainterPath
-from PySide6.QtWidgets import QApplication, QLabel, QSizeGrip, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QSizeGrip, QVBoxLayout, QWidget
 
-from .theme import ACCENT
+COLORS = {"Vert": "#3ddc84", "Bleu": "#4da3ff", "Jaune": "#ffd23f", "Blanc": "#ffffff"}
+MUTED = "#a3a3b8"
+STATUS_COLORS = {"ok": "#3ddc84", "busy": "#ffb020", "idle": "#8b8ba0"}
 
 
 class Overlay(QWidget):
     moved = Signal(int, int)
     resized = Signal(int, int)
+    menu_requested = Signal(QPoint)
 
     def __init__(self):
         super().__init__(None, Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self._drag = None
-        self._scale = 1.0
+        self._scale, self._opacity, self._color = 1.0, 0.9, COLORS["Vert"]
+        self._status_kind = "idle"
+
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(16, 12, 12, 8)
-        self.title = QLabel("🏆 FORTNITE TRACKER")
-        self.opened = QLabel("Coffres ouverts : 0")
-        self.destroyed = QLabel("Coffres détruits : 0")
-        self.last = QLabel("Dernière partie : —")
-        self.status = QLabel("Statut : en attente")
-        for w in (self.title, self.opened, self.destroyed, self.last, self.status):
-            lay.addWidget(w)
+        lay.setContentsMargins(16, 10, 10, 8)
+        lay.setSpacing(2)
+        top = QHBoxLayout()
+        top.setSpacing(10)
+        self.total = QLabel("0")                      # le gros chiffre
+        side = QVBoxLayout()
+        side.setSpacing(1)
+        self.caption = QLabel("coffres ouverts")
+        self.last = QLabel("—")                      # « +7 dernière partie »
+        side.addStretch()
+        side.addWidget(self.caption)
+        side.addWidget(self.last)
+        top.addWidget(self.total)
+        top.addLayout(side)
+        top.addStretch()
+        lay.addLayout(top)
+        self.details = QLabel("")
+        self.status = QLabel("")
+        lay.addWidget(self.details)
+        lay.addWidget(self.status)
         lay.addStretch()
-        grip = QSizeGrip(self)
-        lay.addWidget(grip, 0, Qt.AlignRight | Qt.AlignBottom)
-        self.set_scale(1.0)
-        self.setMinimumSize(180, 110)
+        lay.addWidget(QSizeGrip(self), 0, Qt.AlignRight | Qt.AlignBottom)
+        self._style()
+        self._fit(reset=True)
 
-    def set_scale(self, s: float):
+    # ---- apparence -------------------------------------------------------
+    def _style(self):
+        s = self._scale
+        big, small = max(16, round(30 * s)), max(7, round(8.5 * s))
+        self.total.setStyleSheet(f"color:{self._color}; background:transparent; font-size:{big}pt; font-weight:800;")
+        for w in (self.caption, self.details):
+            w.setStyleSheet(f"color:{MUTED}; background:transparent; font-size:{small}pt;")
+        self.last.setStyleSheet(f"color:#e8e8f0; background:transparent; font-size:{small}pt; font-weight:600;")
+        dot = STATUS_COLORS[self._status_kind]
+        self.status.setStyleSheet(f"color:{dot}; background:transparent; font-size:{small}pt;")
+        self.update()
+
+    def _fit(self, reset=False):
+        """La fenêtre ne devient jamais trop petite pour son contenu."""
+        hint = self.sizeHint()
+        self.resize(hint if reset else self.size().expandedTo(hint))
+
+    def set_scale(self, s: float, fit=False):
         self._scale = s
-        pt = max(7, round(10 * s))
-        css = "color:#e8e8f0; background:transparent; font-size:%dpt;"
-        for w in (self.opened, self.destroyed, self.last, self.status):
-            w.setStyleSheet(css % pt)
-        self.title.setStyleSheet(f"color:{ACCENT}; background:transparent; font-weight:700; font-size:{pt}pt;")
-        self.last.setStyleSheet(css % pt + "color:#8b8ba0;")
+        self._style()
+        self._fit(reset=fit)
 
+    def set_opacity_level(self, v: float):
+        self._opacity = max(0.3, min(1.0, v))
+        self.update()
+
+    def set_color(self, name: str):
+        self._color = COLORS.get(name, COLORS["Vert"])
+        self._style()
+
+    def set_details_visible(self, v: bool):
+        self.details.setVisible(v)
+        self._fit(reset=True)
+
+    # ---- données ---------------------------------------------------------
     def update_stats(self, totals: dict, status: str):
-        self.opened.setText(f"Coffres ouverts : {totals['opened']}")
-        self.destroyed.setText(f"Coffres détruits : {totals['destroyed']}")
+        self.total.setText(str(totals["opened"]))
         last = totals.get("last")
-        if last:
-            txt = "indisponible" if last["certainty"] == "indisponible" else f"{last['opened']} coffre(s)"
-            self.last.setText(f"Dernière partie : {txt}")
+        if last and last["certainty"] != "indisponible":
+            self.last.setText(f"+{last['opened']} dernière partie")
         else:
-            self.last.setText("Dernière partie : —")
-        self.status.setText(f"Statut : {status}")
+            self.last.setText("—")
+        self.details.setText(f"{totals['destroyed']} détruits  ·  {totals['matches']} parties  ·  moy. {totals['avg']:.1f}".replace(".", ","))
+        self._status_kind = "busy" if "cours" in status else ("ok" if "jour" in status else "idle")
+        self.status.setText(f"● {status}")
+        self._style()
+        self._fit()
 
     def move_to_corner(self, corner: str, margin=24):
         g = QApplication.primaryScreen().availableGeometry()
@@ -61,14 +106,20 @@ class Overlay(QWidget):
         y = g.top() + margin if "haut" in corner else g.bottom() - self.height() - margin
         self.move(x, y)
 
+    # ---- dessin et souris ------------------------------------------------
     def paintEvent(self, _):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         path = QPainterPath()
         path.addRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 14, 14)
-        p.fillPath(path, QColor(14, 14, 20, 205))
-        p.setPen(QColor(124, 92, 255, 120))
+        p.fillPath(path, QColor(14, 14, 20, int(255 * self._opacity)))
+        c = QColor(self._color)
+        c.setAlpha(110)
+        p.setPen(c)
         p.drawPath(path)
+
+    def contextMenuEvent(self, e):
+        self.menu_requested.emit(e.globalPos())
 
     def mousePressEvent(self, e):
         if e.button() == Qt.LeftButton:
